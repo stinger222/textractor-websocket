@@ -1,36 +1,34 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, c_void};
 use widestring::U16CString;
 use windows_sys::Win32::{
     Foundation::{BOOL, HINSTANCE, TRUE},
     System::SystemServices::DLL_PROCESS_ATTACH,
 };
-use std::ffi::c_ulong;
-use std::ffi::c_void;
 mod textractor_ws;
 
 // windows-rs does not define DWORD and LPVOID
 // https://github.com/microsoft/windows-rs/issues/881
 #[allow(clippy::upper_case_acronyms)]
-type DWORD = c_ulong;
+type DWORD = u32;
 #[allow(clippy::upper_case_acronyms)]
 type LPVOID = *mut c_void;
 
 fn get_property(info_array: *const InfoForExtension, property_name: &str) -> i64 {
     let mut p = info_array;
-    while !p.is_null() {
-        unsafe {
-            let p_name = (*p).name;
-            let cs1 = CStr::from_ptr(p_name).to_str().unwrap();
-            let cs2 = property_name;
-            if cs1 == cs2 {
-                let v = (*p).value;
-                return v;
+    unsafe {
+        while !p.is_null() {
+            let current = &*p;
+            if current.name.is_null() {
+                break;
+            }
+            let cs1 = CStr::from_ptr(current.name).to_str().unwrap();
+            if cs1 == property_name {
+                return current.value;
             }
             p = p.add(1);
         }
     }
-    println!("Could not find property {}", property_name);
-    panic!("Could not find property");
+    0
 }
 
 #[repr(C)]
@@ -45,14 +43,16 @@ pub extern "C" fn OnNewSentence(
     sentence: *const u16,
     sentence_info: *const InfoForExtension,
 ) -> *const u16 {
-    let u16_str: U16CString;
-    unsafe {
-        u16_str = U16CString::from_ptr_str(sentence);
+    if sentence.is_null() {
+        return sentence;
     }
 
+    let u16_str = unsafe { U16CString::from_ptr_str(sentence) };
     let safe_s = u16_str.to_string_lossy();
+    
     let current_select = get_property(sentence_info, "current select");
     let text_number = get_property(sentence_info, "text number");
+    
     if current_select != 0 && text_number > 1 {
         textractor_ws::handle(safe_s);
     }
