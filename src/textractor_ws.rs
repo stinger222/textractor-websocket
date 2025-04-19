@@ -26,6 +26,11 @@ fn get_sender() -> &'static Sender<String> {
     INSTANCE.get_or_init(run_once)
 }
 
+// Add this public initialization function
+pub(crate) fn start_server() {
+    get_sender();
+}
+
 pub(crate) fn handle(s: String) {
     let sender = get_sender();
     sender.send_timeout(s, SEND_TIMEOUT).unwrap();

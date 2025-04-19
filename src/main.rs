@@ -5,6 +5,8 @@ use std::io;
 fn main() {
     let mut buf = String::new();
     println!("Starting server at {}", textractor_ws::ADDRESS);
+    // Initialize the server at startup
+    textractor_ws::start_server();
     println!("Input any line and press ENTER to send it to all clients");
     loop {
         match io::stdin().read_line(&mut buf) {

@@ -1,6 +1,19 @@
 use std::ffi::CStr;
 use widestring::U16CString;
+use windows_sys::Win32::{
+    Foundation::{BOOL, HINSTANCE, TRUE},
+    System::SystemServices::DLL_PROCESS_ATTACH,
+};
+use std::ffi::c_ulong;
+use std::ffi::c_void;
 mod textractor_ws;
+
+// windows-rs does not define DWORD and LPVOID
+// https://github.com/microsoft/windows-rs/issues/881
+#[allow(clippy::upper_case_acronyms)]
+type DWORD = c_ulong;
+#[allow(clippy::upper_case_acronyms)]
+type LPVOID = *mut c_void;
 
 fn get_property(info_array: *const InfoForExtension, property_name: &str) -> i64 {
     let mut p = info_array;
@@ -44,4 +57,17 @@ pub extern "C" fn OnNewSentence(
         textractor_ws::handle(safe_s);
     }
     sentence
+}
+
+#[no_mangle]
+pub extern "system" fn DllMain(
+    _h_module: HINSTANCE,
+    fdw_reason: DWORD,
+    _lpv_reserved: LPVOID,
+) -> BOOL {
+    if fdw_reason == DLL_PROCESS_ATTACH {
+        textractor_ws::start_server();
+    }
+
+    TRUE
 }
