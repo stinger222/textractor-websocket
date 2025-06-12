@@ -1,4 +1,4 @@
-= textractor_websocket 
+= textractor_websocket!
 
 == Summary
 
